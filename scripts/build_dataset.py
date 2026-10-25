@@ -41,7 +41,7 @@ def extract_run_features(record):
 
     # חילוץ מהירות מנתוני מהירות קיימים או מחישוב מרחק GPS
     if len(speed_list) == n_points:
-        speed_arr = np.array(speed_list, dtype=float)
+        speed_arr = np.array(speed_list, dtype=float) / 3.6
     elif len(lat_list) == n_points and len(lon_list) == n_points:
         speeds = [0.0]
         for i in range(1, n_points):
