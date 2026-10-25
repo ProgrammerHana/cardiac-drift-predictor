@@ -1,0 +1,16 @@
+# Environments
+venv/
+.env
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Heavy data & Raw telemetry (6.5GB+)
+data/raw/
+*.json
+*.gpx
+
+# OS & Editor
+.vscode/
+.DS_Store
