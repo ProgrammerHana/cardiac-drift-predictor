@@ -20,9 +20,7 @@ def load_data():
     )
     df_filtered = df[valid_mask].copy()
     
-    df_filtered["hr_slope_per_elev"] = df_filtered["hr_slope_5_15"] / (df_filtered["elev_gain_15m"] + 10.0)
-    df_filtered["pacing_drift_risk"] = df_filtered["hr_slope_5_15"] * df_filtered["total_duration_min"]
-    
+    # אין צורך יותר לחשב כאן את hr_slope_per_elev או pacing_drift_risk!
     return df_filtered
 
 df = load_data()
@@ -56,40 +54,38 @@ with col1:
 with col2:
     st.header("Physiological Signal")
     fig = px.scatter(
-        df, x="hr_slope_per_elev", y="target_drift_pct", color="total_duration_min",
-        color_continuous_scale="Viridis", title="Cardiac Drift vs. Elevation-Adjusted HR Slope",
-        labels={"hr_slope_per_elev": "HR Slope per Elevation (Risk Index)", "target_drift_pct": "Final Aerobic Drift (%)"},
+        df, x="hr_slope_5_15", y="target_drift_pct", color="elev_gain_15m",
+        color_continuous_scale="Viridis", title="Cardiac Drift vs. Initial HR Slope",
+        labels={"hr_slope_5_15": "HR Slope (bpm/min)", "target_drift_pct": "Final Aerobic Drift (%)"},
         trendline="ols"
     )
-    fig.update_xaxes(range=[-0.2, 0.5])
     fig.update_yaxes(range=[-10, 30])
     st.plotly_chart(fig, use_container_width=True)
 
 # --- סימולטור חיזוי (Sidebar) ---
 st.sidebar.header("⚙️ Live ML Simulator")
-st.sidebar.markdown("Adjust warmup metrics to predict final drift.")
+st.sidebar.markdown("Adjust warmup metrics (first 15 min) to predict final drift.")
 
-sim_duration = st.sidebar.slider("Run Duration (min)", 30, 120, 60)
 sim_elev = st.sidebar.slider("Elevation Gain in 15m (m)", 0, 150, 10)
 sim_hr_mean = st.sidebar.slider("Avg HR (bpm)", 110, 180, 145)
 sim_speed = st.sidebar.slider("Avg Speed (km/h)", 8.0, 16.0, 11.0)
 sim_hr_slope = st.sidebar.slider("HR Slope (bpm/min)", -1.0, 3.0, 1.5)
 
-# חישוב האינטראקציות מאחורי הקלעים
-sim_hr_slope_per_elev = sim_hr_slope / (sim_elev + 10.0)
-sim_pacing_risk = sim_hr_slope * sim_duration
-
-# הכנת הנתונים למודל (חייב להיות תואם בדיוק לסדר העמודות באימון)
+# הכנת הנתונים למודל (9 מאפיינים בלבד - תואם ב-100% לאימון)
 input_features = [
-    "gender", "total_duration_min", "hr_mean_5_15", "speed_mean_5_15",
-    "early_decoupling_pct", "ratio_slope_5_15", "speed_slope_5_15",
-    "hr_slope_5_15", "elev_gain_15m", "hr_slope_per_elev",
-    "pacing_drift_risk", "speed_std_15m"
+    "gender",
+    "hr_mean_5_15",
+    "speed_mean_5_15",
+    "early_decoupling_pct",
+    "ratio_slope_5_15",
+    "speed_slope_5_15",
+    "hr_slope_5_15",
+    "elev_gain_15m",
+    "speed_std_15m"
 ]
 
 input_df = pd.DataFrame([[
     1,                                      # gender (male default)
-    sim_duration,                           # total_duration_min
     sim_hr_mean,                            # hr_mean_5_15
     sim_speed,                              # speed_mean_5_15
     df["early_decoupling_pct"].median(),    # early_decoupling_pct
@@ -97,8 +93,6 @@ input_df = pd.DataFrame([[
     df["speed_slope_5_15"].median(),        # speed_slope_5_15
     sim_hr_slope,                           # hr_slope_5_15
     sim_elev,                               # elev_gain_15m
-    sim_hr_slope_per_elev,                  # hr_slope_per_elev
-    sim_pacing_risk,                        # pacing_drift_risk
     df["speed_std_15m"].median()            # speed_std_15m
 ]], columns=input_features)
 
