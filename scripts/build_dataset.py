@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+
 def haversine_distance(lat1, lon1, lat2, lon2):
     R = 6371000
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
@@ -12,6 +13,7 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     a = math.sin(delta_phi / 2.0) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0) ** 2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
+
 
 def extract_run_features(record):
     hr_list = record.get("heart_rate", [])
@@ -32,7 +34,6 @@ def extract_run_features(record):
     if total_duration_s < 1800:
         return None
 
-    # 1. תיקון יחידות המהירות הקריטי: הכל מומר ל-km/h באופן אחיד
     if len(speed_list) == n_points:
         speed_arr = np.array(speed_list, dtype=float)
     elif len(lat_list) == n_points and len(lon_list) == n_points:
@@ -41,7 +42,7 @@ def extract_run_features(record):
             dt = time_arr[i] - time_arr[i - 1]
             if dt > 0:
                 dist = haversine_distance(lat_list[i - 1], lon_list[i - 1], lat_list[i], lon_list[i])
-                speeds.append((dist / dt) * 3.6) # המרה מ-m/s ל-km/h
+                speeds.append((dist / dt) * 3.6)
             else:
                 speeds.append(0.0)
         speed_arr = np.array(speeds, dtype=float)
@@ -49,9 +50,8 @@ def extract_run_features(record):
         return None
 
     rel_time_s = time_arr - time_arr[0]
-    valid_running = (speed_arr > 6.5) & (hr_arr > 80) # סף ריצה הגיוני ודופק מינימלי
+    valid_running = (speed_arr > 6.5) & (hr_arr > 80)
 
-    # --- חילוץ מאפיינים מדקות 5 עד 15 (לאחר חימום) ---
     mask_5_15 = (rel_time_s >= 300) & (rel_time_s <= 900) & valid_running
     if np.sum(mask_5_15) < 30:
         return None
@@ -70,7 +70,7 @@ def extract_run_features(record):
 
     mask_5_10 = (rel_time_s >= 300) & (rel_time_s <= 600) & valid_running
     mask_10_15 = (rel_time_s > 600) & (rel_time_s <= 900) & valid_running
-    
+
     if np.sum(mask_5_10) > 15 and np.sum(mask_10_15) > 15:
         ratio_5_10 = np.mean(hr_arr[mask_5_10]) / np.mean(speed_arr[mask_5_10])
         ratio_10_15 = np.mean(hr_arr[mask_10_15]) / np.mean(speed_arr[mask_10_15])
@@ -94,7 +94,6 @@ def extract_run_features(record):
     if np.sum(mask_first_half) < 60 or np.sum(mask_second_half) < 60:
         return None
 
-    # חישוב מתוקן - יחס הממוצעים
     ratio_1 = np.mean(hr_arr[mask_first_half]) / np.mean(speed_arr[mask_first_half])
     ratio_2 = np.mean(hr_arr[mask_second_half]) / np.mean(speed_arr[mask_second_half])
     target_drift_pct = float(((ratio_2 / ratio_1) - 1.0) * 100.0)
@@ -118,6 +117,7 @@ def extract_run_features(record):
         "target_drift_pct": round(target_drift_pct, 4),
     }
 
+
 def main():
     PROJECT_ROOT = Path(__file__).resolve().parent.parent
     data_input = PROJECT_ROOT / "data" / "raw" / "endomondoHR.json"
@@ -125,7 +125,7 @@ def main():
     output_path = output_dir / "dataset_sample.csv"
 
     print(f"Reading raw data from: {data_input}")
-    
+
     target_total_runs = 2000
     max_runs_per_user = 5
     user_run_counts = {}
@@ -134,8 +134,9 @@ def main():
     with open(data_input, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
-            if not line: continue
-            
+            if not line:
+                continue
+
             record = ast.literal_eval(line)
             user_id = record.get("userId")
 
@@ -147,20 +148,21 @@ def main():
                 if feats:
                     processed_runs.append(feats)
                     user_run_counts[user_id] = user_run_counts.get(user_id, 0) + 1
-                    
+
                     if len(processed_runs) % 200 == 0:
                         print(f"Collected {len(processed_runs)} runs...")
-                        
+
                 if len(processed_runs) >= target_total_runs:
                     break
 
     df_dataset = pd.DataFrame(processed_runs)
     output_dir.mkdir(parents=True, exist_ok=True)
     df_dataset.to_csv(output_path, index=False)
-    
+
     print("\nExtraction finished!")
     print(f"Shape: {df_dataset.shape}")
     print(df_dataset.describe())
+
 
 if __name__ == "__main__":
     main()

@@ -41,7 +41,6 @@ def main():
     target = "target_drift_pct"
     groups = df["user_id"]
 
-    # שימוש באותו פיצול דטרמיניסטי כמו בשלב האימון
     splitter = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
     dev_idx, _ = next(splitter.split(df[features], groups=groups))
 

@@ -4,32 +4,31 @@ import plotly.express as px
 from pathlib import Path
 import joblib
 
-# הגדרת תצורת העמוד
-st.set_page_config(page_title="Cardiac Drift Predictor", layout="wide", page_icon="🏃‍♂️")
+st.set_page_config(page_title="Cardiac Drift Predictor", layout="wide")
 
-# 1. טעינת נתונים (עבור הגרפים והסטטיסטיקות)
+
 @st.cache_data
 def load_data():
     data_path = Path("data/processed/dataset_sample.csv")
     df = pd.read_csv(data_path)
-    
+
     valid_mask = (
-        (df["total_duration_min"] <= 120.0) &
-        (df["elev_gain_15m"] <= 300.0) &
-        (df["speed_std_15m"] <= 5.0) 
+        (df["total_duration_min"] <= 120.0)
+        & (df["elev_gain_15m"] <= 300.0)
+        & (df["speed_std_15m"] <= 5.0)
     )
     df_filtered = df[valid_mask].copy()
-    
-    # אין צורך יותר לחשב כאן את hr_slope_per_elev או pacing_drift_risk!
     return df_filtered
+
 
 df = load_data()
 
-# 2. טעינת המודל המוכן (Inference Only)
+
 @st.cache_resource
 def load_model():
     model_path = Path("models/xgb_cardiac_drift.joblib")
     return joblib.load(model_path)
+
 
 try:
     model = load_model()
@@ -37,8 +36,7 @@ except FileNotFoundError:
     st.error("Model file not found! Please run 'python scripts/export_model.py' first.")
     st.stop()
 
-# --- ממשק המשתמש הראשי ---
-st.title("🏃‍♂️ Cardiac Drift Early Warning System")
+st.title("Cardiac Drift Early Warning System")
 st.markdown("Predicting late-stage aerobic decoupling based **strictly on the first 15 minutes** of running data.")
 st.divider()
 
@@ -62,8 +60,7 @@ with col2:
     fig.update_yaxes(range=[-10, 30])
     st.plotly_chart(fig, use_container_width=True)
 
-# --- סימולטור חיזוי (Sidebar) ---
-st.sidebar.header("⚙️ Live ML Simulator")
+st.sidebar.header("Live ML Simulator")
 st.sidebar.markdown("Adjust warmup metrics (first 15 min) to predict final drift.")
 
 sim_elev = st.sidebar.slider("Elevation Gain in 15m (m)", 0, 150, 10)
@@ -71,7 +68,6 @@ sim_hr_mean = st.sidebar.slider("Avg HR (bpm)", 110, 180, 145)
 sim_speed = st.sidebar.slider("Avg Speed (km/h)", 8.0, 16.0, 11.0)
 sim_hr_slope = st.sidebar.slider("HR Slope (bpm/min)", -1.0, 3.0, 1.5)
 
-# הכנת הנתונים למודל (9 מאפיינים בלבד - תואם ב-100% לאימון)
 input_features = [
     "gender",
     "hr_mean_5_15",
@@ -96,13 +92,11 @@ input_df = pd.DataFrame([[
     df["speed_std_15m"].median()            # speed_std_15m
 ]], columns=input_features)
 
-# הרצת התחזית בעזרת XGBoost
 predicted_drift = model.predict(input_df)[0]
 
 st.sidebar.divider()
-st.sidebar.subheader("🤖 Model Prediction")
+st.sidebar.subheader("Model Prediction")
 
-# עיצוב התוצאה לפי רמת סיכון
 if predicted_drift < 3.0:
     st.sidebar.success(f"Low Risk\n\nPredicted Drift: {predicted_drift:.1f}%")
 elif 3.0 <= predicted_drift < 6.0:

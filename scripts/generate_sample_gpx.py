@@ -1,6 +1,7 @@
 import math
 from datetime import datetime, timedelta
 
+
 def generate_running_gpx(filename="sample_run_with_hr.gpx", duration_minutes=40):
     start_time = datetime(2026, 10, 17, 7, 0, 0)
     total_seconds = duration_minutes * 60
@@ -28,13 +29,10 @@ def generate_running_gpx(filename="sample_run_with_hr.gpx", duration_minutes=40)
         t = start_time + timedelta(seconds=s)
         time_str = t.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        # ריצה בקצב קבוע קדימה עם שיפועים קלים
         lat = base_lat + (s * 0.000028)
         lon = base_lon + (s * 0.000008)
         ele = base_ele + 3.0 * math.sin(s / 120.0)
 
-        # דופק מתחיל מ-140, ועולה לאט ל-156 למרות שהקצב קבוע (Cardiac Drift)
-        # נוסף רעש פיזיולוגי טבעי קל
         drift = (s / total_seconds) * 16.0
         noise = 2.0 * math.sin(s / 15.0)
         hr = int(140 + drift + noise)
@@ -54,6 +52,7 @@ def generate_running_gpx(filename="sample_run_with_hr.gpx", duration_minutes=40)
         f.write(header + "\n".join(points) + "\n" + footer)
 
     print(f"File created successfully: {filename} ({total_seconds} data points)")
+
 
 if __name__ == "__main__":
     generate_running_gpx()
