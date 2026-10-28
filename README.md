@@ -1,6 +1,7 @@
 # Cardiac Drift Prediction from Early-Run Telemetry
 
 **An end-to-end Machine Learning project for predicting aerobic decoupling using the first 15 minutes of running telemetry.**
+**[Live Demo](https://cardiac-drift-predictor-qx7t4x2bwr8ynyslhdufxf.streamlit.app/)**
 
 ## Project Overview
 
