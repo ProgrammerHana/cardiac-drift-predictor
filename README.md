@@ -75,7 +75,19 @@ The dataset includes recorded speed measurements and GPS-derived speed estimates
 
 Additional preprocessing reduces the impact of invalid measurements, unusually low speeds, and implausible running data.
 
-### 2. Preventing Feature Leakage
+### 2. Feature Standardization and Leakage Prevention
+
+Ridge and Huber regressors were implemented using scikit-learn Pipelines with `StandardScaler`.
+
+Standardization transforms each feature by subtracting its training-set mean and dividing by its training-set standard deviation. This is particularly relevant for regularized linear models, where feature scale affects coefficient penalization.
+
+To prevent data leakage, scaling parameters were fitted exclusively on the training portion of each cross-validation fold and then applied to the corresponding validation data.
+
+An initial experiment showed that standardization alone did not meaningfully improve Ridge's MAE. Nevertheless, it was retained as part of the linear-model preprocessing pipeline.
+
+XGBoost was trained without feature standardization, as tree-based models generally do not require it.
+
+### 3. Preventing Feature Leakage
 
 The prediction task is defined at the 15-minute mark.
 
@@ -85,7 +97,7 @@ The completed run is used to calculate the training target, but not to provide f
 
 Some dataset eligibility filters still depend on completed-run information. Consequently, reported performance applies to the selected population of runs rather than all possible live running sessions.
 
-### 3. Runner-Aware Validation
+### 4. Runner-Aware Validation
 
 Running sessions from the same person are not independent observations. Randomly splitting individual workouts could place sessions from the same runner in both training and validation sets.
 
@@ -102,7 +114,7 @@ There is no runner overlap between the two partitions.
 
 Within the development set, five-fold `GroupKFold` cross-validation is used for model comparison and hyperparameter tuning.
 
-### 4. Model Benchmarking and Hyperparameter Tuning
+### 5. Model Benchmarking and Hyperparameter Tuning
 
 Four regression approaches were compared:
 
@@ -125,7 +137,7 @@ The selected XGBoost configuration was:
 }
 ```
 
-### 5. Feature Ablation Study
+### 6. Feature Ablation Study
 
 An ablation experiment investigated whether the engineered `hr_slope_per_elev` feature improved predictive performance.
 
@@ -140,7 +152,7 @@ Removing the feature produced a small average improvement of approximately 0.21%
 
 The simpler nine-feature configuration was therefore selected. This experiment does not establish that elevation-related interactions are inherently uninformative.
 
-### 6. Model Explainability with SHAP
+### 7. Model Explainability with SHAP
 
 SHAP (SHapley Additive exPlanations) was used to investigate how individual features influence XGBoost predictions.
 
